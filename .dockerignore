@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.env
+.vscode/
+.ipynb_checkpoints/
+.chroma_db/
+*.pptx
+!example slides/**/*.pptx
+Frontier AI Capstone*.docx
+Frontier AI Capstone*.pdf
+cost breakdown.txt
+creation.pptx
+example but x.pptx
+example 1.pptx

@@ -1,0 +1,12 @@
+.git
+__pycache__/
+*.pyc
+.vscode/
+.ipynb_checkpoints/
+.chroma_db/
+Frontier AI Capstone*.docx
+Frontier AI Capstone*.pdf
+cost breakdown.txt
+creation.pptx
+example but x.pptx
+example 1.pptx

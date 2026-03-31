@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Slide Agent</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface-2: #242424;
+      --border: #2e2e2e;
+      --text: #e4e4e4;
+      --text-muted: #888;
+      --accent: #6c63ff;
+      --accent-hover: #7b73ff;
+      --user-bg: #2a2a3d;
+      --assistant-bg: #1e1e1e;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .chat-header {
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .chat-header div h1 { font-size: 18px; margin-bottom: 2px; }
+    .chat-header div p { font-size: 13px; color: var(--text-muted); }
+    .btn-reset {
+      padding: 6px 14px; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text-muted); cursor: pointer; font-size: 12px;
+    }
+    .btn-reset:hover { background: var(--border); color: var(--text); }
+
+    /* Main layout */
+    .main-layout {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Slides panel (left) */
+    .slides-panel {
+      width: 0;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transition: width 0.3s ease;
+      overflow: hidden;
+    }
+    .slides-panel.visible {
+      width: 55%;
+    }
+    .slides-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .slides-panel-header a { color: var(--accent); text-decoration: none; font-size: 12px; }
+    .slides-panel-header a:hover { text-decoration: underline; }
+    .slides-panel-header .close-preview {
+      cursor: pointer; color: var(--text-muted); font-size: 18px; line-height: 1; margin-left: 12px;
+    }
+    .slides-panel-header .close-preview:hover { color: var(--text); }
+    .slides-panel iframe {
+      flex: 1;
+      width: 100%;
+      border: none;
+    }
+
+    /* Chat panel (right) */
+    .chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* Drop zone + uploads */
+    .drop-zone {
+      margin: 10px 16px 0;
+      padding: 14px;
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(108, 99, 255, 0.05);
+    }
+    .drop-zone input { display: none; }
+    .uploaded-files {
+      margin: 6px 16px 0;
+      display: flex; flex-wrap: wrap; gap: 6px;
+      flex-shrink: 0;
+    }
+    .uploaded-file {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: 6px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .uploaded-file .remove {
+      cursor: pointer; color: var(--text-muted); font-size: 14px; line-height: 1;
+    }
+    .uploaded-file .remove:hover { color: var(--text); }
+
+    /* Messages */
+    .messages {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .msg {
+      max-width: 100%; padding: 12px 16px; border-radius: 10px;
+      font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word;
+    }
+    .msg.user { background: var(--user-bg); align-self: flex-end; border-bottom-right-radius: 4px; max-width: 85%; }
+    .msg.assistant { background: var(--assistant-bg); border: 1px solid var(--border); align-self: flex-start; border-bottom-left-radius: 4px; }
+    .msg a { color: var(--accent); text-decoration: none; }
+    .msg a:hover { text-decoration: underline; }
+    .msg.thinking { color: var(--text-muted); font-style: italic; }
+
+    /* Input bar */
+    .input-bar {
+      display: flex; gap: 8px; padding: 12px 16px;
+      border-top: 1px solid var(--border); background: var(--surface);
+      flex-shrink: 0;
+    }
+    .input-bar input {
+      flex: 1; padding: 10px 14px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--surface-2);
+      color: var(--text); font-size: 14px; outline: none;
+    }
+    .input-bar input:focus { border-color: var(--accent); }
+    .input-bar button {
+      padding: 10px 20px; border-radius: 8px; border: none;
+      background: var(--accent); color: #fff; font-size: 14px;
+      font-weight: 600; cursor: pointer;
+    }
+    .input-bar button:hover { background: var(--accent-hover); }
+    .input-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <div class="chat-header">
+    <div>
+      <h1>📊 AI Slide Agent</h1>
+      <p>Tell me what you need — I'll figure out the steps.</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <span style="font-size:13px;color:#888;">{{ user_email }}</span>
+      <button class="btn-reset" id="btnReset">New conversation</button>
+      <a href="/auth/logout" class="btn-reset" style="text-decoration:none;">Sign out</a>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <!-- Slides preview panel (left) -->
+    <div class="slides-panel" id="slidesPanel">
+      <div class="slides-panel-header">
+        <span id="slidesTitle">Presentation Preview</span>
+        <div style="display:flex;align-items:center;">
+          <a id="slidesLink" href="#" target="_blank" rel="noopener">Open in Google Slides</a>
+          <span class="close-preview" id="closePreview">&times;</span>
+        </div>
+      </div>
+      <iframe id="slidesIframe" src="" allowfullscreen></iframe>
+    </div>
+
+    <!-- Chat panel (right) -->
+    <div class="chat-panel">
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept=".pptx,.pptm">
+        📎 Drop a PowerPoint file here or click to upload reference slides
+      </div>
+      <div class="uploaded-files" id="uploadedFiles"></div>
+      <div class="messages" id="messages"></div>
+      <form class="input-bar" id="chatForm" autocomplete="off">
+        <input type="text" id="chatInput" placeholder="Describe your presentation or request changes..." autofocus>
+        <button type="submit" id="btnSend">Send</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const messagesEl = document.getElementById('messages');
+    const chatForm   = document.getElementById('chatForm');
+    const chatInput  = document.getElementById('chatInput');
+    const btnSend    = document.getElementById('btnSend');
+    const btnReset   = document.getElementById('btnReset');
+    const slidesPanel  = document.getElementById('slidesPanel');
+    const slidesIframe = document.getElementById('slidesIframe');
+    const slidesLink   = document.getElementById('slidesLink');
+    const slidesTitle  = document.getElementById('slidesTitle');
+    const closePreview = document.getElementById('closePreview');
+
+    closePreview.addEventListener('click', () => {
+      slidesPanel.classList.remove('visible');
+    });
+
+    function showSlidesPreview(presentationUrl) {
+      const match = presentationUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (!match) return;
+      const presId = match[1];
+      const embedUrl = 'https://docs.google.com/presentation/d/' + presId + '/embed?start=false&loop=false&delayms=3000';
+      slidesIframe.src = embedUrl;
+      slidesLink.href = presentationUrl;
+      slidesPanel.classList.add('visible');
+    }
+
+    function addMessage(role, text) {
+      const div = document.createElement('div');
+      div.className = `msg ${role}`;
+
+      const slidesMatch = text.match(/https:\/\/docs\.google\.com\/presentation\/d\/[a-zA-Z0-9_-]+/);
+      if (slidesMatch && role === 'assistant') {
+        showSlidesPreview(slidesMatch[0]);
+      }
+
+      div.innerHTML = text.replace(
+        /\[([^\]]+)\]\(([^)]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener">$1</a>'
+      );
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return div;
+    }
+
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = chatInput.value.trim();
+      if (!msg) return;
+
+      addMessage('user', msg);
+      chatInput.value = '';
+      btnSend.disabled = true;
+      const thinkingEl = addMessage('assistant thinking', 'Thinking...');
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg }),
+        });
+        const data = await res.json();
+        thinkingEl.remove();
+        addMessage('assistant', data.reply || 'No response.');
+      } catch (err) {
+        thinkingEl.remove();
+        addMessage('assistant', `Error: ${err.message}`);
+      } finally {
+        btnSend.disabled = false;
+        chatInput.focus();
+      }
+    });
+
+    btnReset.addEventListener('click', async () => {
+      await fetch('/api/reset', { method: 'POST' });
+      messagesEl.innerHTML = '';
+      document.getElementById('uploadedFiles').innerHTML = '';
+      slidesPanel.classList.remove('visible');
+      slidesIframe.src = '';
+    });
+
+    // File upload
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadedFiles = document.getElementById('uploadedFiles');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const files = e.dataTransfer.files;
+      if (files.length) handleUpload(files[0]);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) handleUpload(fileInput.files[0]);
+      fileInput.value = '';
+    });
+
+    async function handleUpload(file) {
+      if (!file.name.endsWith('.pptx') && !file.name.endsWith('.pptm')) {
+        addMessage('assistant', 'Only .pptx and .pptm files are supported.');
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', file);
+      dropZone.textContent = 'Uploading...';
+
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.error) {
+          addMessage('assistant', 'Upload failed: ' + data.error);
+        } else {
+          const tag = document.createElement('div');
+          tag.className = 'uploaded-file';
+          tag.innerHTML = '📄 ' + data.filename + ' (' + data.slide_count + ' slides) <span class="remove">&times;</span>';
+          tag.querySelector('.remove').addEventListener('click', () => tag.remove());
+          uploadedFiles.appendChild(tag);
+          addMessage('assistant', 'Uploaded "' + data.filename + '" with ' + data.slide_count + ' slides. I can now use this as reference material.');
+        }
+      } catch (err) {
+        addMessage('assistant', 'Upload error: ' + err.message);
+      } finally {
+        dropZone.innerHTML = '<input type="file" id="fileInput" accept=".pptx,.pptm">📎 Drop a PowerPoint file here or click to upload reference slides';
+        const newInput = dropZone.querySelector('input');
+        newInput.addEventListener('change', () => {
+          if (newInput.files.length) handleUpload(newInput.files[0]);
+          newInput.value = '';
+        });
+      }
+    }
+  </script>
+</body>
+</html>
