@@ -12,8 +12,8 @@ COPY services/ services/
 COPY templates/ templates/
 COPY app.py tools.py state.py ./
 
-# Copy example slides for RAG indexing
-COPY "example slides/" "example slides/"
+# Copy example slides for RAG indexing (use JSON array form for paths with spaces)
+COPY ["example slides/", "example slides/"]
 
 # ChromaDB will persist here
 RUN mkdir -p .chroma_db
