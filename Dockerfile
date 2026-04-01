@@ -1,3 +1,11 @@
+FROM python:3.12-slim AS builder
+
+WORKDIR /staging
+# Copy just the example slides folder (with spaces) and rename it
+COPY . .
+RUN if [ -d "example slides" ]; then mv "example slides" example_slides; fi
+
+
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -12,14 +20,14 @@ COPY services/ services/
 COPY templates/ templates/
 COPY app.py tools.py state.py ./
 
-# Copy example slides for RAG indexing (use JSON array form for paths with spaces)
-COPY ["example slides/", "example slides/"]
+# Copy example slides from builder stage (renamed, no spaces)
+COPY --from=builder /staging/example_slides/ example_slides/
 
 # ChromaDB will persist here
 RUN mkdir -p .chroma_db
 
 # Pre-index RAG at build time so cold starts are fast
-RUN SKIP_RAG_INDEX= python -c "from services.rag import index_example_slides; index_example_slides()"
+RUN python -c "from services.rag import index_example_slides; index_example_slides()"
 
 # Cloud Run sets PORT env var
 ENV PORT=8080

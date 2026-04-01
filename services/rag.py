@@ -5,7 +5,7 @@ import hashlib
 import chromadb
 from pptx import Presentation
 
-EXAMPLE_SLIDES_DIR = "example slides"
+EXAMPLE_SLIDES_DIR = "example_slides" if os.path.exists("example_slides") else "example slides"
 CHROMA_PERSIST_DIR = ".chroma_db"
 
 
